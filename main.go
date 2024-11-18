@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/go-version"
@@ -94,9 +95,10 @@ func run() error {
 	}
 
 	/*
-	 * Step 2: Obtain Terraform plan
+	 * Step 2: Obtain Terraform plan if no plan file paths given
 	 *
 	 * Run `terraform plan` for each working directory provided by the user.
+	 * If plan file paths given read it in.
 	 */
 
 	terraformOptions := []terraform.Option{
@@ -105,9 +107,27 @@ func run() error {
 		terraform.WithSkipRefresh(skipRefresh),
 	}
 
-	plans, err := getPlans(ctx, workdirs, terraformOptions)
-	if err != nil {
-		return err
+	plans := make([]engine.Plan, 0)
+	if planPaths == nil {
+		plans, err = getPlans(ctx, workdirs, terraformOptions)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		for _, planPath := range planPaths {
+			jsonPlan, err := terraform.GetPlanFromPath(planPath)
+			if err != nil {
+				return err
+			}
+			planPathSplit := strings.Split(planPath, "/")
+			moduleID := strings.Join(planPathSplit[:len(planPathSplit)-1], "/")
+			plan, err := engine.SummarizeJSONPlan(moduleID, jsonPlan)
+			if err != nil {
+				return err
+			}
+			plans = append(plans, plan)
+		}
 	}
 
 	/*
@@ -187,6 +207,7 @@ var (
 	skipRefresh  bool
 	terraformBin string
 	verbosity    int
+	planPaths    []string
 )
 
 func parseFlags() {
@@ -198,6 +219,7 @@ func parseFlags() {
 	flag.BoolVarP(&skipRefresh, "skip-refresh", "S", false, "skip running terraform refresh")
 	flag.StringVar(&terraformBin, "terraform-bin", "terraform", "terraform binary to use")
 	flag.CountVarP(&verbosity, "verbosity", "v", "increase verbosity (can be specified multiple times)")
+	flag.StringSliceVar(&planPaths, "plan-path", nil, "path to a plan file to use")
 
 	flag.Parse()
 }
