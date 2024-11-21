@@ -30,7 +30,10 @@ func SummarizeJSONPlan(moduleID string, jsonPlan *tfjson.Plan) (Plan, error) {
 		isCreated := slices.Contains(rc.Change.Actions, tfjson.ActionCreate)
 		isDestroyed := slices.Contains(rc.Change.Actions, tfjson.ActionDelete)
 
-		if !isCreated && !isDestroyed {
+		// Only act on resources that are created XOR destroyed but not on resources that are replaced
+		isReplaced := isCreated && isDestroyed
+
+		if (!isCreated && !isDestroyed) || isReplaced {
 			continue
 		}
 
