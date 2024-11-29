@@ -150,11 +150,11 @@ tfautomv ./production
 By default, tfautomv writes moves to as `moved` blocks when possible and falls
 back to `terraform state mv` commands when not.
 
-You can force `tfautomv` to write only `moved` blocks with the `--output=moves`
+You can force `tfautomv` to write only `moved` blocks with the `--output=blocks`
 flag:
 
 ```bash
-tfautomv --output=moves
+tfautomv --output=blocks
 ```
 
 You can force `tfautomv` to write only `terraform state mv` commands with the
